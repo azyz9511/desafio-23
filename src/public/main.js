@@ -1,4 +1,3 @@
-const socket = io.connect();
 
 // tabla productos
 // ---------------------------------------------------------------------------------------------------------------------------------------
@@ -23,10 +22,17 @@ formProductos.addEventListener('submit',(e) => {
         body: JSON.stringify(datos)
     })
 
-     setTimeout(() => socket.emit('guardar','guardado con exito'),500);
-            socket.on('historialGuardar', data => {
-                    render(data)
-            });
+    setTimeout(() => {
+        fetch('/productos', {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(data => data.json())
+        .then(data => render(data))
+    },2000);
 
     formProductos.reset();
 
@@ -56,9 +62,16 @@ function render(data) {
     }
 }
 
-socket.on('historialProductos', data => {
-    render(data)
-});
+// Se cargan los productos que hayan al cargar la pagina
+fetch('/productos', {
+    method: 'GET',
+    headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+    }
+})
+.then(data => data.json())
+.then(data => render(data))
 
 // chat
 // -----------------------------------------------------------------------------------------------------------------------------------------
@@ -82,23 +95,32 @@ formChat.addEventListener('submit',(e) => {
         fyh: `${fyh.getDate()}/${(fyh.getMonth() + 1)}/${fyh.getFullYear()} ${fyh.getHours()}:${fyh.getMinutes()}:${fyh.getSeconds()}`
     };
 
-    socket.emit('nuevoMensaje', mensaje);
-    socket.on('historialGlobal',data => {
-        const html = data
-        .map((elem, index) => {
-            return `<div>
-            <b style='color:blue;'>${elem.id}</b>
-            <span style='color:brown'>[${elem.fyh}] : </span>
-            <i style='color:green'>${elem.text}</i>
-            </div>`
-        })
-        .join(' ');
-        document.getElementById('mensajes').innerHTML = html;
-    });
+    fetch('/chat', {
+        method: 'POST',
+        headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(mensaje)
+    })
+
     document.getElementById('texto').value = '';
+
+    setTimeout(() => {
+        fetch('/chat', {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(data => data.json())
+        .then(data => renderChat(data))
+    },2000);
+
 });
 
-socket.on('historialChat', data => {
+function renderChat(data) {
     if(data.length !== 0){
         const html = data
         .map((elem, index) => {
@@ -110,8 +132,18 @@ socket.on('historialChat', data => {
         })
         .join(' ');
         document.getElementById('mensajes').innerHTML = html;
-    }else{
-        document.getElementById('mensajes').innerHTML = '';
-        formChat.reset();
     }
-});
+}
+
+// Se cargan los mensajes que hayan al cargar la pagina
+setTimeout(() => {
+fetch('/chat', {
+    method: 'GET',
+    headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+    }
+})
+.then(datos => datos.json())
+.then(datos => renderChat(datos))
+},2000);

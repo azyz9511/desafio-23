@@ -1,22 +1,30 @@
 const products = require('../services/productos');
 
 const productos = {
-    newProduct : async ( req , res ) => {
-        const data = await products.addProduct(req.body);
-        res.send(data);
+    newProduct : async ctx => {
+        const data = await products.addProduct(ctx.request.body);
+        ctx.body = {
+            status: 'success',
+            message: data,
+        }
     },
-    getProducts : async ( req , res ) => {
+    getProducts : async ctx => {
         const data = await products.readProducts();
-        res.send(data);
+        ctx.body = data;
     },
-    updateProduct : async ( req , res ) => {
-        console.log(req.body);
-        const data = await products.upProduct(req.body);
-        res.send(data);
+    updateProduct : async ctx => {
+        const data = await products.upProduct(ctx.request.body);
+        ctx.body = {
+            status: 'success',
+            message: data,
+        }
     },
-    deleteProduct : async ( req , res ) => {
-        const data = await products.delProduct(req.params.id);
-        res.send(data);
+    deleteProduct : async ctx => {
+        const data = await products.delProduct(ctx.params.id);
+        ctx.body = {
+            status: 'success',
+            message: data,
+        }
     }
 }
 

@@ -1,91 +1,26 @@
 // Importaciones
-const express = require('express');
-const {Server: HttpServer} = require('http');
-const {Server: IOServer} = require('socket.io');
-const yargs = require('yargs/yargs')(process.argv.slice(2))
-const args = yargs.default({ puerto:8080, modo:'FORK' }).argv;
-const cpus = require('os').cpus().length;
-const cluster = require('cluster');
-const PORT = process.env.PORT || 8080;
+const Koa = require('koa');
+const koaBody = require('koa-body');
+const render = require('koa-ejs');
+const path = require('path');
+const serve = require('koa-static');
 
-// importacion de los servicio chat y productos
-const chat = require('./src/services/chat');
-const productos = require('./src/services/productos');
+const app = new Koa();
 
 // importacion de routers
-const router = require('./src/routes/router');
-
-// Inicializar express, http y socket.io
-const app = express();
-const httpserver = new HttpServer(app);
-const io = new IOServer(httpserver);
+const routers = require('./src/routes/routes');
 
 // middlewares
-app.use(express.urlencoded({extended:true}));
-app.use(express.json());
-app.set('view engine','ejs');
-app.set('views', __dirname + '/src/views');
-app.use(express.static("src/public"));
-app.use('/',router);
-
-// sockets
-io.on('connection',async (socket) => {
-
-    //mensaje de usuario conectado
-    console.log('Usuario conectado'); 
-
-    // socket para productos
-    socket.on('guardar', async data => {
-        try{
-            console.log(data);
-            const products = await productos.readProducts();
-            io.sockets.emit('historialGuardar',products);
-        }catch(e){
-            console.log(`Ha ocurrido el siguiente error: ${e}`);
-        }
-    });
-
-    try{
-        const products = await productos.readProducts();
-            socket.emit('historialProductos',products);
-    }catch (e){
-        console.log(`Ha ocurrido el siguiente error: ${e}`);
-    }
-
-    //socket para chat
-    socket.on('nuevoMensaje',async data => {
-        try{
-            await chat.addMessage(data);
-            const mensajes = await chat.readMessages();
-            io.sockets.emit('historialGlobal',mensajes);
-        }catch (e){
-            console.log(`Ha ocurrido el siguiente error: ${e}`);
-        }
-    });
-    try{
-        const mensajes = await chat.readMessages();
-        socket.emit('historialChat',mensajes);
-    }catch (e){
-        console.log(`Ha ocurrido el siguiente error: ${e}`);
-    }
-});
+render(app, {
+    root: path.join(__dirname + '/src/', 'views'),
+    layout: false,
+    viewExt: 'ejs',
+    cache: false,
+    debug: false
+})
+app.use(koaBody());
+app.use(routers.routes());
+app.use(serve(__dirname+'/src/public'));
 
 //inicio de servidor
-
-if(args.modo === 'CLUSTER' && cluster.isPrimary){
-    console.log(`Master ${process.pid} is running`);
-    for (let i = 0; i < cpus; i++) {
-        cluster.fork();        
-    }
-    cluster.on('exit',(worker, code, signal) => {
-        console.log(`worker ${worker.process.pid} died`);
-        cluster.fork();
-    });
-}else{
-    httpserver.listen(PORT, () => {
-        console.log(`proceso ${process.pid} corriendo en el puerto ${PORT}`);
-    });   
-    console.log(`worker ${process.pid} is running`);
-}
-
-module.exports = httpserver;
+app.listen(8080, () => console.log('Servidor levantado con koa en puerto 8080'));

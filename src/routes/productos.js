@@ -1,5 +1,7 @@
-const express = require('express');
-const router = express.Router();
+const Router = require('koa-router');
+const router = new Router({
+    prefix: '/productos'
+});
 const productos = require('../controllers/productos');
 
 router.post('/', productos.newProduct);
